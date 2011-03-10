@@ -122,16 +122,6 @@ getDebt <- function(startYear, endYear=startYear) {
    return(result)
 }
 
-getTaxRates <- function(startYear, endYear=startYear, type="") {
-   query = paste(prefix,"getTaxRates?",sep="")
-   if(nchar(type) > 0) {
-      query = paste(query,"type=",type,"&",sep="")
-   }
-   years = startYear:endYear
-   result <- getYearsFrame(query,years)
-   return(result)
-}
-
 getInflation <- function(startYear, endYear=startYear) {
    query = paste(prefix,"getInflation?",sep="")
    years = startYear:endYear
@@ -150,6 +140,35 @@ getYearsFrame <- function(query, years) {
    return(result)
 }
 
+yearToFrame <- function(xmlDoc, year) {
+   result <- xmlSApply(xmlDoc, function(x) xmlAttrs(x))
+   result <- t(result)
+   row.names(result) <- year
+   result <- as.data.frame(result)
+   return(result)
+}
+
+# TODO There's a bug in here:
+getTaxRates <- function(startYear, endYear=startYear, type="") {
+   query = paste(prefix,"getTaxRates?",sep="")
+   if(nchar(type) > 0) {
+      query = paste(query,"type=",type,"&",sep="")
+   }
+   years = startYear:endYear
+   result <- data.frame()
+   j = 1 # indices of the dataframe
+   for(i in years) {
+      thisQuery = paste(query, "year=", i, sep="")
+      xmlResult <- xmlRoot(xmlTreeParse(thisQuery))
+      newResult <- xmlSApply(xmlResult, function(x) xmlAttrs(x))
+      newResult <- t(newResult)
+      row.names(newResult) <- j:(j+nrow(newResult) - 1)
+      result <- rbind(result,newResult)
+      j = j + nrow(result)
+   }
+   return(result)
+}
+
 pasteArgs <- function(params) {
    arguments = ""
    for(name in names(params)) {
@@ -161,14 +180,6 @@ pasteArgs <- function(params) {
    # Remove the trailing '&'
    arguments = substr(arguments, 1, nchar(arguments) - 1)
    return(arguments)
-}
-
-yearToFrame <- function(xmlDoc, year) {
-   result <- xmlSApply(xmlDoc, function(x) xmlAttrs(x))
-   result <- t(result)
-   row.names(result) <- year
-   result <- as.data.frame(result)
-   return(result)
 }
 
 xmlToDataframe <- function(xmlDoc) {
